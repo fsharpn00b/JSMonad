@@ -42,40 +42,48 @@ JS Monad uses the following tools, which you do not need to install.
 regardless of how they are defined. To reference these functions and values in the monadic code, you must include them in the
 context passed to Monad.monad_eval () or Monad.monad_eval_2 (). For example:
 
-  let m = new MaybeMonad.MaybeMonad ();
-  let x = 1;
-  let context = { 'x' : x };
-  let code = `unit (x);`;
-  let result = m.monad_eval_2 (code, context);
-  // result === Option.Some (1);
+```
+let m = new MaybeMonad.MaybeMonad ();
+let x = 1;
+let context = { 'x' : x };
+let code = `unit (x);`;
+let result = m.monad_eval_2 (code, context);
+// result === Option.Some (1);
+```
 
 - You cannot use control flow constructs in monadic code except the following: if, else if, else.
 - You cannot define a function, either named or anonymous, inside monadic code. However, you can reference a named or anonymous function that you include in the context passed to Monad.monad_eval () or Monad.monad_eval_2 (). For example:
 
-  let m = new MaybeMonad.MaybeMonad ();
-  let context = { 'f' : function (x) { return x + 1; } };
-  let code = `unit (f (1));`;
-  let result = m.monad_eval_2 (code, context);
-  // result === Option.Some (2);
+```
+let m = new MaybeMonad.MaybeMonad ();
+let context = { 'f' : function (x) { return x + 1; } };
+let code = `unit (f (1));`;
+let result = m.monad_eval_2 (code, context);
+// result === Option.Some (2);
+```
 
 - Currently, you should not use escaped quotes in monadic code, as they might not work as expected. For example, the following
 code works.
 
-  let m = new MaybeMonad.MaybeMonad ();
-  let code = `
-    console.log ('"Hello world"');
-    unit (0);
-  `;
-	let result = m.monad_eval_2 (code);
+```
+let m = new MaybeMonad.MaybeMonad ();
+let code = `
+console.log ('"Hello world"');
+unit (0);
+`;
+let result = m.monad_eval_2 (code);
+```
 
 The following does not work.
 
-  let m = new MaybeMonad.MaybeMonad ();
-  let code = `
-    console.log ('\'Hello world\'');
-    unit (0);
-  `;
-  let result = m.monad_eval_2 (code);
+```
+let m = new MaybeMonad.MaybeMonad ();
+let code = `
+console.log ('\'Hello world\'');
+unit (0);
+`;
+let result = m.monad_eval_2 (code);
+```
 
 <h3>Thank You</h3>
 
