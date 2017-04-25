@@ -1,0 +1,214 @@
+/* Copyright 2017 FSharpN00b.
+This file is part of JS Monad.
+
+JS Monad is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+JS Monad is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with JS Monad.  If not, see <http://www.gnu.org/licenses/>. */
+
+/* Notes:
+For more information about Peg.js, see:
+https://pegjs.org/
+
+Peg.js does not recognize ` as a string delimiter.
+Rules do not have to be defined in order of appearance.
+
+When a rule contains a sequence of expressions, the match results are normally returned in an array. We can change this in one
+of the following ways.
+1. Group the expressions together using parentheses. Prefix the group with '$'. That returns the match results as a concatenated
+string rather than an array. For example:
+$(expr1 expr2)
+2. When we reference the rule, prefix the reference with '$'. That does the same as item 1. For example:
+rule1 = expr1 expr2
+rule1 = $rule2
+3. Append the following action to the rule: { return text (); }
+4. Assign names to the individual expressions and append an action to the rule that returns only certain names. Returning a name
+means to return the match result for the expression with that name. For example:
+rule1 = a:expr1 expr2 { return a; }
+rule2 = a:expr1 expr2 b:expr3 { return [a, b]; }
+Note do not assign a name to an expression that is already assigned to a rule. For example, do not do the following:
+rule1 = expr
+rule2 = rule1:rule1 expr2 { return rule1; }
+*/
+
+/* Initializer. This code runs before the parsing. */
+{
+/* See:
+http://www.w3schools.com/js/js_strict.asp
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
+*/
+	`use strict`;
+
+/* See the comments in parser.js about generating a parser programmatically or manually, and how that affects using require in
+this file. */
+	let common = require (`./common.js`);
+}
+
+/* The rule to start parsing with. */
+start = program
+
+/* A whitespace character. */
+w = [ \t\n]
+
+/* A character that is not an expression delimiter. */
+not_expr = [^()]
+
+/* The problem with matching nested expressions is if we encounter a left expression delimiter, we need to find the corresponding
+right expression delimiter. We cannot simply search for the next right delimiter (that is, a non-greedy match), because we might
+have the following string:
+0123456
+((...))
+In that case we would incorrectly pair the left delimiter at index 0 with the right delimiter at index 5.
+We also cannot simply search for the last right delimiter (that is, a greedy match) because we might have the following string:
+0123456789
+(...)(...)
+In that case we would incorrectly pair the left delimiter at index 0 with the right delimiter at index 9.
+Typically, we solve this problem by maintaining a count of the nesting level. Each left delimiter we encounter increases the
+nesting level by 1 and each right delimiter decreases it by 1.
+
+A recursive parsing rule gives us an easier solution.
+1. If we are parsing text and encounter a left expression delimiter, we apply the expr rule.
+2. If we are applying the expr rule and we encounter another left expression delimiter, we apply the expr rule recursively. If we
+fail, the text is not valid.
+
+In other words, each expression must contain only:
+1. Nested expressions.
+2. Characters that are not expression delimiters.
+*/
+/*
+1. Match the following sequence.
+	a. The left expression delimiter.
+	b. Match the following sequence and concatenate the results.
+		i. One or more characters that are either:
+			1. A character that is not an expression delimiter.
+			2. A nested expression.
+	c. The right expression delimiter.
+*/
+expr = '(' $(not_expr/expr)+ ')'
+
+/* A character that is not a block delimiter. */
+not_block = [^{}]
+
+/*
+1. Match the following sequence.
+	a. The left block delimiter.
+	b. Match the following sequence and concatenate the results.
+		i. One or more characters that are either:
+			1. A character that is not a block delimiter.
+			2. A nested block.
+	c. The right block delimiter.
+
+We want to remove the outermost pair of delimiters, so we assign a name to part 1b and return only that. The delimiters of nested
+expression are still captured because they are matched by part 1b.
+Also see the comments for the expr rule.
+*/
+block = '{' body:$(block/not_block)+ '}' { return body; }
+
+/*
+1. Match the following sequence.
+	a. Match the following sequence and concatenate the results.
+		i. The if keyword.
+		ii. Zero or more whitespace characters.
+		iii. An expression.
+	b. Zero or more whitespace characters.
+	c. A block.
+*/
+if = pred:$('if' w* expr) w* body:block { return new common.Branch (pred, body); }
+
+/*
+1. Match the following sequence.
+	a. Match the following sequence and concatenate the results.
+		i. The else keyword.
+		ii. One or more whitespace characters.
+		iii. The if keyword.
+		iv. Zero or more whitespace characters.
+		v. An expression.
+	b. Zero or more whitespace characters.
+	c. A block.
+	d. Zero or more whitespace characters. This is for matching any whitespace characters between multiple else if branches.
+*/
+else_if = pred:$('else' w+ 'if' w* expr) w* body:block w* { return new common.Branch (pred, body); }
+
+/*
+1. Match the following sequence.
+	a. The else keyword.
+	b. Zero or more whitespace characters.
+	c. A block.
+*/
+else = 'else' w* body:block { return new common.Branch ('else', body); }
+
+/*
+1. Match the following sequence.
+	a. An if branches.
+	b. Zero or more whitespace characters.
+	c. Zero or more else if branches. The elseif rule matches any whitespace characters following each else if branch.
+	d. Zero or one else branch.
+
+Notes:
+'*' means zero to many. Matches for this an expression qualified with '*' are returned in an array.
+'?' means zero or one. If there is no match for this expression, null is returned. The IfGroup constructor converts the match
+result to an option type value.
+
+An alternate way to match any whitespace characters following each else if branch is as follows.
+
+	if_group = a:if w* b:(b_:else_if w* { return b_; })* c:else? { return new common.IfGroup (a, b, c); }
+
+The else if branch is returned, whereas the whitespace following it is discarded.
+*/
+if_group = a:if w* b:else_if* c:else? { return new common.IfGroup (a, b, c); }
+
+/* JavaScript value names must begin with a letter, '$', or '_'. After that, they can contain letters, digits, '$', or '_'.
+
+1. Match the following sequence.
+	a. The let keyword.
+	b. Match the following sequence and concatenate the results.
+		i. One character that is one of the following, case insensitive.
+			1. A letter, underscore, or dollar sign.
+		ii. Zero or more characters that are one of the following, case insensitive.
+			1. A letter, digit, underscore, or dollar sign.
+	c. Zero or more whitespace characters.
+	d. An equal sign.
+	e. Zero or more whitespace characters.
+	f. Match the following sequence and concatenate the results.
+		i. One or more characters that are:
+			1. Not a statement delimiter.
+	g. A statement delimiter.
+*/
+assignment = 'let' w* name:$([a-z_$]i [a-z0-9_$]i*) w* '=' w* value:$([^;]+) ';' { return 'monad_let (`' + name + '`, ' + value + ');'; }
+
+/*
+1. Match the following sequence and concatenate the results.
+	a. One or more characters that are:
+		i. Not a statement delimiter.
+	b. A statement delimiter.
+*/
+stmt = $([^;]+ ';')
+
+/*
+1. Match zero or more of the following sequence.
+	a. Zero or more whitespace characters.
+	b. Either:
+		i. An if group.
+		b. An assignment.
+		c. A statement that is not an assignment.
+	c. Zero or more whitespace characters.
+*/
+program = (w* p:(if_group/assignment/stmt) w* { return p; })*
+
+/* TODO2 We could also match comments. I believe it would look like the following.
+
+single_line_comment = //[^\n]* \n
+
+multiline_comment_start = \/*
+multiline_comment_end = *\/
+not_multiline_comment = (!multiline_comment_start !multiline_comment_end .)*
+multiline_comment = multiline_comment_start (multiline_comment/not_multiline_comment)+ multiline_comment_end
+*/
