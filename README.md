@@ -31,7 +31,7 @@ JS Monad does not yet support the following methods:
 - try/finally
 
 <h3>Dependencies</h3>
-JS Monad was built with Node.js 6.10.2 and uses ECMAScript 2015 (ES6) (see http://node.green/ for details of Node.js support for ECMAScript 2015).
+JS Monad was built with Node.js 6.10.2 which supports ECMAScript 2015 (ES6) (see http://node.green/ for details of Node.js support for ECMAScript 2015).
 
 JS Monad uses the following tools, which you do not need to install.
 - seedrandom.js by David Bau, https://github.com/davidbau/seedrandom
@@ -69,7 +69,7 @@ let result = m.monad_eval_2 (code, context);
 // result === Option.Some (1);
 ```
 
-We recommend you use Monad.monad_eval_2 () rather than Monad.monad_eval (), because Monad.monad_eval_2 adds values to the context that are related to the child monad class. For example, MaybeMonad.monad_eval_2 adds a reference to DiscriminatedUnion.Option, so you can use Option.Some () and Option.None in the monadic code.
+We recommend you use Monad.monad_eval_2 () rather than Monad.monad_eval (), because Monad.monad_eval_2 () adds values to the context that are related to the child monad class. For example, MaybeMonad.monad_eval_2 () adds a reference to the Option type defined in Utils/DiscriminatedUnion.js, so you can use Option.Some () and Option.None in the monadic code.
 
 If you use 'let' in monadic code, the parser translates into the function monad_let (). monad_let () adds a name and value to the context. For example, the following code works.
 
@@ -98,7 +98,7 @@ let result = m.monad_eval_2 (code);
 ```
 
 - You cannot use control flow constructs in monadic code except the following: if, else if, else.
-- You cannot define a function, either named or anonymous, inside monadic code. However, you can reference a named or anonymous function that you include in the context passed to Monad.monad_eval () or Monad.monad_eval_2 (). For example:
+- You cannot define a function, either named or anonymous, inside monadic code. However, you can reference a named or anonymous function that you include in the context passed to Monad.monad_eval () or Monad.monad_eval_2 (). For example, the following code works.
 
 ```
 let m = new MaybeMonad.MaybeMonad ();
