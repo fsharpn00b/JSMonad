@@ -3,6 +3,7 @@ Adds F#-style computation expressions to JavaScript.
 
 JS Monad implements the following monads:
 - Maybe
+- Either
 - Array
 - State
 - Pause (also known as the Interrupt or Coroutine monad)
@@ -36,6 +37,23 @@ JS Monad uses the following tools, which you do not need to install.
 - seedrandom.js by David Bau, https://github.com/davidbau/seedrandom
 - PEG.js by David Majda, https://pegjs.org/
 
+<h3>Quick Start</h3>
+
+The quickest way to get started with JS Monad is to download the repository as a .zip file by clicking the "Clone or download" drop down at the right side of the JS Monad Github page, and selecting "Download ZIP." Unzip the repository in a location of your choice. Then simply reference the .js file for the monad you want to use. For example, to use the Maybe monad, you would write:
+
+```
+let MaybeMonad = require (`<JS monad repository folder>/Monads/MaybeMonad.js`);
+```
+
+You can then write code such as:
+
+```
+let m = new MaybeMonad.MaybeMonad ();
+let code = `unit (1);`;
+let result = m.monad_eval_2 (code);
+// result === Option.Some (1)
+```
+
 <h3>Known Issues</h3>
 
 - Functions and values that are visible in the scope where monadic code is defined are not visible to the monadic code,
@@ -49,6 +67,34 @@ let context = { 'x' : x };
 let code = `unit (x);`;
 let result = m.monad_eval_2 (code, context);
 // result === Option.Some (1);
+```
+
+We recommend you use Monad.monad_eval_2 () rather than Monad.monad_eval (), because Monad.monad_eval_2 adds values to the context that are related to the child monad class. For example, MaybeMonad.monad_eval_2 adds a reference to DiscriminatedUnion.Option, so you can use Option.Some () and Option.None in the monadic code.
+
+If you use 'let' in monadic code, the parser translates into the function monad_let (). monad_let () adds a name and value to the context. For example, the following code works.
+
+```
+let m = new MaybeMonad.MaybeMonad ()
+let code = `
+	let x = 1;
+	let x = x + 1;
+	unit (x);
+`;
+let result = m.monad_eval_2 (code);
+// result === Option.Some (2);
+```
+
+The following code also works.
+
+```
+let m = new MaybeMonad.MaybeMonad ()
+let code = `
+	monad_let ('x', 1);
+	monad_let ('x', x + 1);
+	unit (x);
+`;
+let result = m.monad_eval_2 (code);
+// result === Option.Some (2);
 ```
 
 - You cannot use control flow constructs in monadic code except the following: if, else if, else.

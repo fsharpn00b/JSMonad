@@ -47,7 +47,7 @@ Example usage:
         monad_do (pause (0));
         unit (1);
     `;
-    let result = m.monad_eval (code, { 'pause' : PauseMonad.pause });
+    let result = m.monad_eval_2 (code);
     let result_ = result ();
     let result__ = result_.next ();
     let result___ = result__.value;
@@ -86,7 +86,7 @@ class PauseMonad extends Monad {
     Example usage:
         let m = new PauseMonad.PauseMonad ();
         let code = `unit (1);`;
-        let result = m.monad_eval (code);
+        let result = m.monad_eval_2 (code);
         let result_ = result ();
         let result__ = result_.value;
         // result__ === 1
@@ -112,7 +112,7 @@ class PauseMonad extends Monad {
             bind ('x', pause (1));
             unit (x);
         `;
-        let result = m.monad_eval (code, { 'pause' : PauseMonad.pause });
+        let result = m.monad_eval_2 (code);
         let result_ = result ();
         let result__ = result_.next ();
         let result___ = result__.value;
@@ -151,7 +151,7 @@ class PauseMonad extends Monad {
 			monad_do (pause (0));
 			unit (1);
 		`;
-		let result = m.monad_eval (code, { 'pause' : PauseMonad.pause });
+		let result = m.monad_eval_2 (code);
 		let result_ = result ();
 		let result__ = result_.next ();
 		let result___ = result__.value;
@@ -171,6 +171,25 @@ class PauseMonad extends Monad {
         /* No value is bound as a result of this call. rest simply calls Monad.monad_eval_helper (). See Monad.do_helper (). */
         return this.bind (result, rest);
     }
+
+	/* PauseMonad.monad_eval_2
+	Calls Monad.monad_eval with the specified code and context. Adds the option module alias to the context.
+
+    Example usage:
+	TODO2
+
+    Remarks:
+    None.
+
+    @code - The monadic code.
+    @context - The values to be defined in the scope of the monadic code.
+    @result - The result of running the monadic code.
+    */
+	/* Note you cannot create an associative array with []. Adding items to the array fails silently. */
+	PauseMonad.prototype.monad_eval_2 = function (code /* : string */, context = {} /* : object */) /* : option */ {
+		context.pause = pause;
+		return this.monad_eval (code, context);
+	}
 
 module.exports.Step = Step;
 module.exports.pause = pause;

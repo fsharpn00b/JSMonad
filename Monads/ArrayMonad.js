@@ -190,6 +190,24 @@ class ArrayMonad extends Monad {
         return f ();
     }
 
+	/* ArrayMonad.monad_eval_2
+	Calls Monad.monad_eval with the specified code and context. Adds the option module alias to the context.
+
+    Example usage:
+	// TODO2
+
+    Remarks:
+    None.
+
+    @code - The monadic code.
+    @context - The values to be defined in the scope of the monadic code.
+    @result - The result of running the monadic code.
+    */
+	/* Note you cannot create an associative array with []. Adding items to the array fails silently. */
+	ArrayMonad.prototype.monad_eval_2 = function (code /* : string */, context = {} /* : object */) /* : option */ {
+		return this.monad_eval (code, context);
+	}
+
 	/* We do not implement Monad.run (). */
 
 module.exports.ArrayMonad = ArrayMonad;
